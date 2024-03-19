@@ -82,3 +82,58 @@ def solve_SIR(key, P, length_scale, nu_max = 1, sf = 'unif'):
     return (t_span, SIR), (u, y, s)
 
 # %%
+def solve_SIR_test(key, P, constants):
+    """Solve SIR
+    St/dt = -beta*S*I - nu*S
+    It/dt = beta*S*I - gamma*I
+    Rt/dt = gamma*I + nu*S
+
+    P = location(y) 의 개수
+    """
+    # 초기 조건 설정
+    S0 = 0.999
+    I0 = 0.001
+    R0 = 0
+    y0 = [S0, I0, R0]
+    beta = 0.3
+    gamma = 1/14
+
+    # 시간 배열 설정
+    tmin, tmax = 0, 100 # days
+    dt = 1
+    t_span = np.arange(tmin, tmax, dt)
+    
+    # SIR 모델을 풀기 위한 함수
+    def SIR_model(y, t, beta, gamma, nu_func):
+        S, I, R = y
+        nu = nu_func(t)  # 시간에 따른 nu 값을 가져옵니다.
+        dSdt = -beta * S * I - nu * S
+        dIdt = beta * S * I - gamma * I
+        dRdt = gamma * I + nu * S
+        return [dSdt, dIdt, dRdt]
+
+    
+    # Generate subkeys
+    subkeys = random.split(key, 1)
+
+    # customizing nu function
+    def nu_function(t, constants):
+        if t < 2:
+            return 0
+        else:
+            index = int((t - 2) // 14)  # 해당 인덱스 계산
+            return constants[index]
+
+    f_fn = lambda t: nu_function(t,constants)
+
+    # 미분방정식 풀이
+    SIR = odeint(SIR_model, y0, t_span, args=(beta, gamma, f_fn))
+  
+    u = f_fn(t_span)
+    idx = random.randint(subkeys[1], (1, P), 0, len(t_span))
+    y = t_span[idx]
+    s = SIR[idx, :]
+
+    return (t_span, SIR), (u, y, s)
+
+# %%

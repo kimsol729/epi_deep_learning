@@ -4,7 +4,7 @@ from jax import random, jit
 from jax.config import config
 from functools import partial
 from torch.utils import data
-from model_sir import solve_SIR
+from model_sir import solve_SIR, solve_SIR_test
 import pickle
 
 #%%
@@ -49,6 +49,16 @@ def generate_one_training_data(key, P, nu_max, sf):
 # Geneate test data corresponding to one input sample
 def generate_one_test_data(key, P, nu_max, sf):
     (t, SIR), (u_test, y, s) = solve_SIR(key, P, length_scale = 2, nu_max = nu_max, sf = sf)
+
+    u_test = np.tile(u_test, (P, 1))
+    y_test = t.flatten()[:,None]
+    s_test = SIR.T.flatten()
+
+    return u_test, y_test, s_test
+
+
+def generate_one_test_data_real(key, P, nu_max, sf):
+    (t, SIR), (u_test, y, s) = solve_SIR_test(key, P, constants=[0.1, 0.2, 0.3, 0.4, 0.3, 0.2, 0.1])
 
     u_test = np.tile(u_test, (P, 1))
     y_test = t.flatten()[:,None]
@@ -105,6 +115,32 @@ def generate_test_data(key, N, P, nu_max, sf):
     config.update("jax_enable_x64", False)
     return u_test, y_test, s_test
 
+# Geneate test data corresponding to N input sample
+def generate_test_data_real(key, N, P, nu_max, sf):
+    config.update("jax_enable_x64", True)
+    keys = random.split(key, N)
+    # u_test, y_test, s_test = vmap(generate_one_test_data, (0, None))(keys, P)
+    u_test_list, y_test_list, s_test_list = [], [], []
+
+    for k in keys:
+        u, y, s = generate_one_test_data_real(k, P, nu_max, sf)
+
+        u_test_list.append(u)
+        y_test_list.append(y)
+        s_test_list.append(s)
+
+    u_test = np.stack(u_test_list)
+    y_test = np.stack(y_test_list)
+    s_test = np.stack(s_test_list)
+
+    u_test = np.float32(u_test.reshape(N * P, -1))
+    y_test = np.float32(y_test.reshape(N * P, -1))
+    s_test = np.float32(s_test.reshape(-1, N * P)).T
+
+    config.update("jax_enable_x64", False)
+    return u_test, y_test, s_test
+
+
 #%% Data generator
 key = random.PRNGKey(0)
 
@@ -113,24 +149,24 @@ length_scale = 2
 
 # Resolution of the solution
 Nt = 100 # u의 사이즈랑 일치..
-N = 1000 # number of input samples
+N = 3000 # number of input samples
 m = Nt   # number of input sensors
 P_train = 500 # number of output sensors
 
-nu_max = 0.2
+nu_max = 0.01
 sf = 'unif' # sampling field ('unif', 'gauss')
 
 #%% training data set
 u_train, y_train, s_train = generate_training_data(key, N, P_train, nu_max, sf)
 
 # training data set 를 파일에 저장
-with open('../data/data_u_train_unif_1.pkl', 'wb') as file:
+with open('../data/data_u_train_unif_0_01_2.pkl', 'wb') as file:
     pickle.dump(u_train, file)
 
-with open('../data/data_y_train_unif_1.pkl', 'wb') as file:
+with open('../data/data_y_train_unif_0_01_2.pkl', 'wb') as file:
     pickle.dump(y_train, file)
 
-with open('../data/data_s_train_unif_1.pkl', 'wb') as file:
+with open('../data/data_s_train_unif_0_01_2.pkl', 'wb') as file:
     pickle.dump(s_train, file)
 
 #%%
