@@ -118,10 +118,14 @@ def solve_SIR_test(key, P, constants):
 
     # customizing nu function
     def nu_function(t, constants):
+        print("t:",t)
         if t < 2:
             return 0
+        elif t > 100:
+            return constants[-1]
         else:
             index = int((t - 2) // 14)  # 해당 인덱스 계산
+            print("index:", index)
             return constants[index]
 
     f_fn = lambda t: nu_function(t,constants)
@@ -129,7 +133,7 @@ def solve_SIR_test(key, P, constants):
     # 미분방정식 풀이
     SIR = odeint(SIR_model, y0, t_span, args=(beta, gamma, f_fn))
   
-    u = f_fn(t_span)
+    u = [f_fn(t) for t in t_span]
     idx = random.randint(subkeys[1], (1, P), 0, len(t_span))
     y = t_span[idx]
     s = SIR[idx, :]

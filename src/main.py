@@ -3,6 +3,7 @@ from jax import random
 from jax import device_put
 from model_sir import solve_SIR_test, solve_SIR
 from network import DeepONet
+from torch.utils import data
 from data_generator import DataGenerator, generate_test_data
 import matplotlib.pyplot as plt
 import pickle
